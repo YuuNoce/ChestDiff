@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ChestDiff/ChestDiff.csproj">
+    <Platform Project="x64" />
+  </Project>
+</Solution>

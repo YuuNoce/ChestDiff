@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <Version>0.0.0.1</Version>
+    <Author>YuuNoce</Author>
+    <Name>ChestDiff</Name>
+    <Punchline>Export Free Company chest slot diffs to CSV.</Punchline>
+    <Description>ChestDiff scans a selected Free Company chest tab, compares it with the previous scan for that tab, and exports slot-level ItemId and quantity differences to CSV.
+
+Commands:
+/chestdiff - Open ChestDiff.
+/chestdiff export - Export a summary CSV.
+/chestdiff dump - Export raw FC chest history text to CSV.
+/chestdiff help - Show command help.</Description>
+    <Tags>inventory;freecompany;csv</Tags>
+  </PropertyGroup>
+</Project>
