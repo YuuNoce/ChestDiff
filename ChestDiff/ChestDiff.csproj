@@ -4,8 +4,8 @@
     <Version>0.0.0.1</Version>
     <Author>YuuNoce</Author>
     <Name>ChestDiff</Name>
-    <Punchline>Export Free Company chest slot diffs to CSV.</Punchline>
-    <Description>ChestDiff scans a selected Free Company chest tab, compares it with the previous scan for that tab, and exports slot-level ItemId and quantity differences to CSV.
+    <Punchline>Summarize Free Company chest history by item and actor.</Punchline>
+    <Description>ChestDiff reads the visible Free Company chest history, filters rows after a configured date/time, and summarizes deposits and withdrawals by item and actor.
 
 Commands:
 /chestdiff - Open ChestDiff.

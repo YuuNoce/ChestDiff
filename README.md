@@ -1,6 +1,6 @@
 # ChestDiff
 
-ChestDiff is a minimal Dalamud plugin that reads the visible Free Company chest history screen, filters rows after a configured date/time, and shows or exports them.
+ChestDiff is a minimal Dalamud plugin that reads the visible Free Company chest history screen, filters rows after a configured date/time, and summarizes deposits and withdrawals by item and actor.
 
 ## Commands
 
@@ -20,11 +20,12 @@ ChestDiff is a minimal Dalamud plugin that reads the visible Free Company chest 
 
 ## Notes
 
-- Open the FC chest history screen in game before exporting.
+- Open the Free Company Chest Log in game before showing or exporting.
 - The date/time is selected manually in the plugin UI.
 - The plugin UI can show the summary in the window, export the summary CSV, export a dump file, or combine those actions.
-- The detail CSV keeps `raw_text` because the in-game history text is the primary source.
-- The summary CSV aggregates deposited, withdrawn, and net quantity by item.
+- The summary view shows All and Tab 1-5 summaries with `Item`, `Actor`, `Deposit`, `Withdraw`, and `Net` columns.
+- The summary CSV aggregates deposited, withdrawn, and net quantity by item and actor.
+- The optional dump file keeps raw parsed rows for troubleshooting.
 - `item_id` is resolved by matching the parsed item name against the Item sheet when possible.
 - CSV files are stored under the plugin config directory's `exports` folder by default.
 
