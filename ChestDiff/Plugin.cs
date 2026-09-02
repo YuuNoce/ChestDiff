@@ -148,16 +148,8 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        // Hidden diagnostic commands kept for addon/array investigation.
-        if (args.Equals("addons", System.StringComparison.OrdinalIgnoreCase))
+        if (HandleDiagnosticCommand(args))
         {
-            HandleAddonsCommand();
-            return;
-        }
-
-        if (args.Equals("arrays", System.StringComparison.OrdinalIgnoreCase))
-        {
-            HandleArraysCommand();
             return;
         }
 
@@ -210,6 +202,24 @@ public sealed class Plugin : IDalamudPlugin
             ChatGui.PrintError($"Dump failed: {ex.Message}", ChatTag);
             mainWindow.SetStatus($"Dump failed: {ex.Message}");
         }
+    }
+
+    // Hidden diagnostic commands kept for addon/array investigation.
+    private bool HandleDiagnosticCommand(string args)
+    {
+        if (args.Equals("addons", System.StringComparison.OrdinalIgnoreCase))
+        {
+            HandleAddonsCommand();
+            return true;
+        }
+
+        if (args.Equals("arrays", System.StringComparison.OrdinalIgnoreCase))
+        {
+            HandleArraysCommand();
+            return true;
+        }
+
+        return false;
     }
 
     private void HandleAddonsCommand()
