@@ -47,7 +47,7 @@ public sealed partial class ChestHistoryService
         var entries = allEntries
             .Where(entry => entry.Timestamp >= from)
             .OrderBy(entry => entry.Timestamp)
-            .ThenBy(entry => entry.Actor, StringComparer.Ordinal)
+            .ThenBy(entry => entry.PlayerName, StringComparer.Ordinal)
             .ThenBy(entry => entry.ItemId)
             .ThenBy(entry => entry.ItemName, StringComparer.Ordinal)
             .ToList();
@@ -71,7 +71,7 @@ public sealed partial class ChestHistoryService
     {
         var capturedAt = DateTimeOffset.Now;
         return ReadHistoryEntriesFromArrays(capturedAt)
-            .Select(entry => $"{entry.Timestamp:yyyy-MM-dd HH:mm},{entry.ActionKind},{entry.Action},{entry.Actor},{FormatChestTab(entry.ChestTab)},{entry.ChestLocation},{entry.ItemName},{entry.ItemId},{entry.Quantity}")
+            .Select(entry => $"{entry.Timestamp:yyyy-MM-dd HH:mm},{entry.ActionKind},{entry.Action},{entry.PlayerName},{FormatChestTab(entry.ChestTab)},{entry.ChestLocation},{entry.ItemName},{entry.ItemId},{entry.Quantity}")
             .ToList();
     }
 
@@ -192,7 +192,7 @@ public sealed partial class ChestHistoryService
                     break;
                 }
 
-                var actor = CleanDisplayText(strings[stringIndex].ToString());
+                var playerName = CleanDisplayText(strings[stringIndex].ToString());
                 var rawChestLocation = strings[stringIndex + 1].ToString();
                 var chestTab = ParseChestTab(rawChestLocation);
                 var chestLocation = CleanDisplayText(rawChestLocation);
@@ -220,7 +220,7 @@ public sealed partial class ChestHistoryService
                         : 0;
                 }
 
-                if (string.IsNullOrWhiteSpace(actor) && string.IsNullOrWhiteSpace(itemName) && quantity <= 0)
+                if (string.IsNullOrWhiteSpace(playerName) && string.IsNullOrWhiteSpace(itemName) && quantity <= 0)
                 {
                     continue;
                 }
@@ -229,7 +229,7 @@ public sealed partial class ChestHistoryService
                     timestamp,
                     actionKind,
                     ActionFromKind(actionKind),
-                    actor,
+                    playerName,
                     chestTab,
                     chestLocation,
                     itemName,
@@ -557,7 +557,7 @@ public sealed partial class ChestHistoryService
 
         var path = Path.Combine(outputDirectory, $"fc_chest_dump_from_{from:yyyyMMdd_HHmm}_to_{capturedAt:yyyyMMdd_HHmmss}.csv");
         var builder = new StringBuilder();
-        builder.AppendLine("requested_from_time,captured_at,timestamp,action_kind,action,actor,chest_tab,chest_location,item_name,quantity,raw_item_text");
+        builder.AppendLine("requested_from_time,captured_at,timestamp,action_kind,action,player,chest_tab,chest_location,item_name,quantity,raw_item_text");
 
         foreach (var entry in entries)
         {
@@ -566,7 +566,7 @@ public sealed partial class ChestHistoryService
             builder.Append(Escape(entry.Timestamp == DateTimeOffset.MinValue ? "" : FormatCsvDateTime(entry.Timestamp))).Append(',');
             builder.Append(entry.ActionKind.ToString(CultureInfo.InvariantCulture)).Append(',');
             builder.Append(Escape(entry.Action)).Append(',');
-            builder.Append(Escape(entry.Actor)).Append(',');
+            builder.Append(Escape(entry.PlayerName)).Append(',');
             builder.Append(Escape(FormatChestTab(entry.ChestTab))).Append(',');
             builder.Append(Escape(entry.ChestLocation)).Append(',');
             builder.Append(Escape(entry.ItemName)).Append(',');
@@ -585,14 +585,14 @@ public sealed partial class ChestHistoryService
 
         var path = Path.Combine(outputDirectory, $"fc_chest_summary_from_{from:yyyyMMdd_HHmm}_to_{capturedAt:yyyyMMdd_HHmmss}.csv");
         var builder = new StringBuilder();
-        builder.AppendLine("requested_from_time,captured_at,item_name,actor,deposited_quantity,withdrawn_quantity,net_quantity");
+        builder.AppendLine("requested_from_time,captured_at,item_name,player,deposited_quantity,withdrawn_quantity,net_quantity");
 
         foreach (var summary in summaries)
         {
             builder.Append(Escape(FormatCsvDateTime(from))).Append(',');
             builder.Append(Escape(FormatCsvDateTime(capturedAt))).Append(',');
             builder.Append(Escape(summary.ItemName)).Append(',');
-            builder.Append(Escape(summary.Actor)).Append(',');
+            builder.Append(Escape(summary.PlayerName)).Append(',');
             builder.Append(summary.Deposited.ToString(CultureInfo.InvariantCulture)).Append(',');
             builder.Append(summary.Withdrawn.ToString(CultureInfo.InvariantCulture)).Append(',');
             builder.AppendLine(summary.Net.ToString(CultureInfo.InvariantCulture));
@@ -606,7 +606,7 @@ public sealed partial class ChestHistoryService
     {
         return entries
             .Where(IsSummaryEntry)
-            .GroupBy(entry => new SummaryKey(entry.Actor, GetSummaryItemId(entry), GetSummaryItemName(entry)), SummaryKeyComparer.Instance)
+            .GroupBy(entry => new SummaryKey(entry.PlayerName, GetSummaryItemId(entry), GetSummaryItemName(entry)), SummaryKeyComparer.Instance)
             .Select(group =>
             {
                 var deposited = group
@@ -618,13 +618,13 @@ public sealed partial class ChestHistoryService
                 var sample = group.First();
                 return new HistorySummaryEntry(
                     GetSummaryItemName(sample),
-                    sample.Actor,
+                    sample.PlayerName,
                     deposited,
                     withdrawn,
                     group.Sum(GetSummaryNetQuantity));
             })
             .OrderBy(summary => summary.ItemName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(summary => summary.Actor, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(summary => summary.PlayerName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
@@ -1050,9 +1050,9 @@ public sealed record HistoryLoadResult(DateTimeOffset From, DateTimeOffset Captu
 
 public sealed record DebugDumpResult(string CsvPath, int Count);
 
-public sealed record HistoryEntry(DateTimeOffset Timestamp, int ActionKind, string Action, string Actor, int ChestTab, string ChestLocation, string ItemName, uint ItemId, int Quantity, string RawItemText);
+public sealed record HistoryEntry(DateTimeOffset Timestamp, int ActionKind, string Action, string PlayerName, int ChestTab, string ChestLocation, string ItemName, uint ItemId, int Quantity, string RawItemText);
 
-public sealed record HistorySummaryEntry(string ItemName, string Actor, int Deposited, int Withdrawn, int Net);
+public sealed record HistorySummaryEntry(string ItemName, string PlayerName, int Deposited, int Withdrawn, int Net);
 
 public sealed record HistoryTabSummary(int ChestTab, IReadOnlyList<HistorySummaryEntry> Summaries);
 
@@ -1066,7 +1066,7 @@ internal sealed record ArrayDumpEntry(string Source, int ArrayType, string Array
 
 internal sealed record ItemKey(uint ItemId, string ItemName);
 
-internal sealed record SummaryKey(string Actor, uint ItemId, string ItemName);
+internal sealed record SummaryKey(string PlayerName, uint ItemId, string ItemName);
 
 internal sealed class SummaryKeyComparer : IEqualityComparer<SummaryKey>
 {
@@ -1084,14 +1084,14 @@ internal sealed class SummaryKeyComparer : IEqualityComparer<SummaryKey>
             return false;
         }
 
-        return string.Equals(x.Actor, y.Actor, StringComparison.OrdinalIgnoreCase)
+        return string.Equals(x.PlayerName, y.PlayerName, StringComparison.OrdinalIgnoreCase)
             && ItemKeyComparer.Instance.Equals(new ItemKey(x.ItemId, x.ItemName), new ItemKey(y.ItemId, y.ItemName));
     }
 
     public int GetHashCode(SummaryKey obj)
     {
         var hash = new HashCode();
-        hash.Add(obj.Actor, StringComparer.OrdinalIgnoreCase);
+        hash.Add(obj.PlayerName, StringComparer.OrdinalIgnoreCase);
         hash.Add(ItemKeyComparer.Instance.GetHashCode(new ItemKey(obj.ItemId, obj.ItemName)));
         return hash.ToHashCode();
     }

@@ -308,7 +308,7 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         ImGui.TableSetupColumn("Item");
-        ImGui.TableSetupColumn("Actor");
+        ImGui.TableSetupColumn("Player");
         ImGui.TableSetupColumn("Deposit");
         ImGui.TableSetupColumn("Withdraw");
         ImGui.TableSetupColumn("Net");
@@ -327,7 +327,7 @@ public sealed class MainWindow : Window, IDisposable
         {
             ImGui.TableNextRow();
             TableText(summary.ItemName);
-            TableText(summary.Actor);
+            TableText(summary.PlayerName);
             TableText(summary.Deposited.ToString(CultureInfo.InvariantCulture));
             TableText(summary.Withdrawn.ToString(CultureInfo.InvariantCulture));
             TableText(summary.Net.ToString(CultureInfo.InvariantCulture));
