@@ -361,6 +361,11 @@ public sealed class MainWindow : Window, IDisposable
             lines.Add($"Dump: {result.DumpCsvPath}");
         }
 
+        if (!string.IsNullOrWhiteSpace(result.Warning))
+        {
+            lines.Add($"Warning: {result.Warning}");
+        }
+
         return string.Join("\n", lines);
     }
 }

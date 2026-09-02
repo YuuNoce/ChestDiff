@@ -65,7 +65,9 @@ public sealed class Plugin : IDalamudPlugin
     public HistoryExportResult ExportSinceConfiguredTime()
     {
         Configuration.Save();
-        var history = HistoryService.LoadSince(Configuration.GetExportStartDateTime());
+        var from = Configuration.GetExportStartDateTime();
+        ThrowIfExportStartTimeIsInFuture(from);
+        var history = HistoryService.LoadSince(from);
         var result = ExportHistory(history);
         return result;
     }
@@ -73,23 +75,50 @@ public sealed class Plugin : IDalamudPlugin
     public HistoryLoadResult LoadSinceConfiguredTime()
     {
         Configuration.Save();
-        return HistoryService.LoadSince(Configuration.GetExportStartDateTime());
+        var from = Configuration.GetExportStartDateTime();
+        ThrowIfExportStartTimeIsInFuture(from);
+        return HistoryService.LoadSince(from);
     }
 
     public HistoryExportResult ExportHistory(HistoryLoadResult history)
     {
         var result = HistoryService.Export(history, exportSummaryCsv: true, exportDumpFile: false);
-        Configuration.SetLastExportTime(result.CapturedAt);
-        Configuration.Save();
-        return result;
+        return SaveLastExportTime(result);
     }
 
     public HistoryExportResult ExportHistory(HistoryLoadResult history, bool exportSummaryCsv, bool exportDumpFile)
     {
         var result = HistoryService.Export(history, exportSummaryCsv, exportDumpFile);
-        Configuration.SetLastExportTime(result.CapturedAt);
-        Configuration.Save();
-        return result;
+        return SaveLastExportTime(result);
+    }
+
+    private HistoryExportResult SaveLastExportTime(HistoryExportResult result)
+    {
+        try
+        {
+            Configuration.SetLastExportTime(result.CapturedAt);
+            Configuration.Save();
+            return result;
+        }
+        catch (System.Exception ex)
+        {
+            Log.Warning(ex, "Failed to save last export time after FC chest history export.");
+            return result with
+            {
+                Warning = $"Export completed, but failed to save last export time: {ex.Message}",
+            };
+        }
+    }
+
+    private static void ThrowIfExportStartTimeIsInFuture(System.DateTimeOffset from)
+    {
+        var now = System.DateTimeOffset.Now;
+        if (from <= now)
+        {
+            return;
+        }
+
+        throw new System.InvalidOperationException($"Start date cannot be in the future. Selected: {from:yyyy-MM-dd HH:mm}; now: {now:yyyy-MM-dd HH:mm}.");
     }
 
     private void OnCommand(string command, string args)
@@ -160,6 +189,11 @@ public sealed class Plugin : IDalamudPlugin
             ? $" Dump: {result.DumpCsvPath}"
             : "";
         ChatGui.Print($"Exported {result.ExportedEntryCount}/{result.VisibleHistoryRowCount} visible FC chest history rows since {result.From:yyyy-MM-dd HH:mm}.{paths}", ChatTag, ChatTagColor);
+
+        if (!string.IsNullOrWhiteSpace(result.Warning))
+        {
+            ChatGui.PrintError(result.Warning, ChatTag);
+        }
     }
 
     private void HandleDumpCommand()

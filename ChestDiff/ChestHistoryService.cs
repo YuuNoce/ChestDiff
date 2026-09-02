@@ -1044,7 +1044,10 @@ public sealed partial class ChestHistoryService
     private static partial Regex WhitespaceRegex();
 }
 
-public sealed record HistoryExportResult(DateTimeOffset From, DateTimeOffset CapturedAt, int VisibleHistoryRowCount, int ExportedEntryCount, string? SummaryCsvPath, string? DumpCsvPath);
+public sealed record HistoryExportResult(DateTimeOffset From, DateTimeOffset CapturedAt, int VisibleHistoryRowCount, int ExportedEntryCount, string? SummaryCsvPath, string? DumpCsvPath)
+{
+    public string? Warning { get; init; }
+}
 
 public sealed record HistoryLoadResult(DateTimeOffset From, DateTimeOffset CapturedAt, int VisibleHistoryRowCount, int ExportedEntryCount, IReadOnlyList<HistoryEntry> Entries, IReadOnlyList<HistorySummaryEntry> Summaries, IReadOnlyList<HistoryTabSummary> TabSummaries);
 
@@ -1113,7 +1116,7 @@ internal sealed class ItemKeyComparer : IEqualityComparer<ItemKey>
             return false;
         }
 
-        if (x.ItemId != 0 && y.ItemId != 0)
+        if (x.ItemId != 0 || y.ItemId != 0)
         {
             return x.ItemId == y.ItemId;
         }
