@@ -4,6 +4,7 @@
     <Version>0.1.0.0</Version>
     <Author>YuuNoce</Author>
     <Name>ChestDiff</Name>
+    <IconUrl>https://raw.githubusercontent.com/YuuNoce/ChestDiff/main/ChestDiff/Images/ChestDiff_icon.png</IconUrl>
     <Punchline>Summarize Free Company chest history by item and player.</Punchline>
     <Description>ChestDiff reads the visible Free Company chest history, filters rows after a configured date/time, and summarizes deposits and withdrawals by item and player. It only processes rows available from the in-game Free Company Chest Log.
 
@@ -14,4 +15,7 @@ Commands:
 /chestdiff help - Show command help.</Description>
     <Tags>inventory;freecompany;csv</Tags>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="Images\ChestDiff_icon.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
