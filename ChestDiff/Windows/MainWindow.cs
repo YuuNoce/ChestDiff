@@ -91,6 +91,7 @@ public sealed class MainWindow : Window, IDisposable
 
         var exportsFile = exportCsv || exportDumpFile;
         var hasAction = showInWindow || exportsFile;
+        // The export button stays disabled until the selected start mode and output actions are valid.
         var canRun = historyLogOpen
             && hasAction
             && (exportStartMode != Configuration.StartModeLastExport || hasLastExport);
@@ -188,6 +189,7 @@ public sealed class MainWindow : Window, IDisposable
 
     private void SaveSettings()
     {
+        // Keep the window state and persisted configuration in sync before running an export.
         plugin.Configuration.FromYear = fromYear;
         plugin.Configuration.FromMonth = fromMonth;
         plugin.Configuration.FromDay = fromDay;
@@ -246,6 +248,7 @@ public sealed class MainWindow : Window, IDisposable
             var history = plugin.LoadSinceConfiguredTime();
             HistoryExportResult? exportResult = null;
 
+            // Showing in the window and writing files are independent actions from the same loaded snapshot.
             if (exportCsv || exportDumpFile)
             {
                 exportResult = plugin.ExportHistory(history, exportCsv, exportDumpFile);
@@ -276,6 +279,7 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Text($"Preview: {history.ExportedEntryCount}/{history.VisibleHistoryRowCount} rows since {history.From:yyyy-MM-dd HH:mm}");
 
+        // Keep the full summary and per-tab summaries in one table layout for easier comparison.
         if (!ImGui.BeginTabBar("ChestDiffSummaryTabs"))
         {
             return;
@@ -346,6 +350,7 @@ public sealed class MainWindow : Window, IDisposable
     {
         var lines = new List<string>();
 
+        // When the preview is visible, the row count is already shown above the table.
         if (!showPreview)
         {
             lines.Add($"Exported {result.ExportedEntryCount}/{result.VisibleHistoryRowCount} rows since {result.From:yyyy-MM-dd HH:mm}.");

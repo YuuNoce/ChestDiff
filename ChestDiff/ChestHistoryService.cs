@@ -15,6 +15,7 @@ namespace ChestDiff;
 
 public sealed partial class ChestHistoryService
 {
+    // The FC chest history rows are exposed through stable slots in the FreeCompanyChest arrays.
     private const int HistoryStringStartIndex = 70;
     private const int HistoryStringStride = 5;
     private const int HistoryNumberStartIndex = 356;
@@ -40,6 +41,7 @@ public sealed partial class ChestHistoryService
         return Export(LoadSince(from), exportSummaryCsv: true, exportDumpFile: false);
     }
 
+    // Reads the current history window, filters it by timestamp, and prepares player/item summaries.
     public HistoryLoadResult LoadSince(DateTimeOffset from)
     {
         var capturedAt = DateTimeOffset.Now;
@@ -109,6 +111,7 @@ public sealed partial class ChestHistoryService
         }
     }
 
+    // Dumps FreeCompany-related string and number arrays for investigating client-side data layout.
     public DebugDumpResult DumpFreeCompanyArrays()
     {
         unsafe
@@ -181,6 +184,7 @@ public sealed partial class ChestHistoryService
             var numbers = numberArray->Span;
             var entries = new List<HistoryEntry>();
 
+            // Each visible history row uses five string slots and three number slots.
             for (var stringIndex = HistoryStringStartIndex;
                  stringIndex + 4 < strings.Length;
                  stringIndex += HistoryStringStride)
@@ -202,6 +206,7 @@ public sealed partial class ChestHistoryService
 
                 if (!TryParseTimestamp(timestampText, capturedAt, out var timestamp))
                 {
+                    // Once a parsed row has been seen, the first non-date row marks the end of the visible log.
                     if (entries.Count > 0)
                     {
                         break;
@@ -215,6 +220,7 @@ public sealed partial class ChestHistoryService
                 var quantity = numbers[numberIndex + 2];
                 if (quantity <= 0)
                 {
+                    // Older or localized rows may leave quantity out of the number array, so fall back to text.
                     quantity = TryParseQuantity(strings[stringIndex + 3].ToString(), out var parsedQuantity)
                         ? parsedQuantity
                         : 0;
@@ -317,9 +323,11 @@ public sealed partial class ChestHistoryService
         }
     }
 
+    // Collects every text source known to contain visible addon strings.
     private unsafe static IReadOnlyList<AddonTextDumpEntry> CollectAddonText(AtkUnitBase* unit)
     {
         var entries = new List<AddonTextDumpEntry>();
+        // The text can live in different UI surfaces depending on client language and addon layout.
         CollectTextNodes(unit->RootNode, entries, depth: 0);
         CollectListLabels(unit->RootNode, entries, depth: 0);
         CollectAtkValues(unit, entries);
@@ -364,6 +372,7 @@ public sealed partial class ChestHistoryService
         }
     }
 
+    // Searches component lists because some rows expose labels through list APIs instead of text nodes.
     private unsafe static void CollectListLabels(AtkResNode* node, List<AddonTextDumpEntry> results, int depth)
     {
         if (node is null || depth > 64)
@@ -429,6 +438,7 @@ public sealed partial class ChestHistoryService
         }
     }
 
+    // Captures raw AtkValues because some addon data is stored outside visible nodes.
     private unsafe static void CollectAtkValues(AtkUnitBase* unit, List<AddonTextDumpEntry> results)
     {
         if (unit->AtkValues is null)
@@ -539,6 +549,7 @@ public sealed partial class ChestHistoryService
 
     private HistoryEntry ParseEntry(string rawText, DateTimeOffset capturedAt)
     {
+        // Text-node parsing is kept as a fallback for debug dumps where array indices are not available.
         var timestamp = TryParseTimestamp(rawText, capturedAt, out var parsedTimestamp)
             ? parsedTimestamp
             : DateTimeOffset.MinValue;
@@ -606,6 +617,7 @@ public sealed partial class ChestHistoryService
     {
         return entries
             .Where(IsSummaryEntry)
+            // Prefer item IDs when available; localized item names are only used for rows without IDs.
             .GroupBy(entry => new SummaryKey(entry.PlayerName, GetSummaryItemId(entry), GetSummaryItemName(entry)), SummaryKeyComparer.Instance)
             .Select(group =>
             {
@@ -705,6 +717,7 @@ public sealed partial class ChestHistoryService
 
     private static string DetectGilAction(HistoryEntry entry)
     {
+        // Gil rows can be ambiguous in the numeric action kind, so inspect nearby localized text as well.
         return DetectAction($"{entry.RawItemText} {entry.ChestLocation}");
     }
 
@@ -759,6 +772,7 @@ public sealed partial class ChestHistoryService
         return path;
     }
 
+    // Writes string/number array dumps to support index discovery after game or Dalamud changes.
     private string WriteArrayDumpCsv(IReadOnlyList<ArrayDumpEntry> entries)
     {
         var outputDirectory = GetOutputDirectory();
@@ -795,6 +809,7 @@ public sealed partial class ChestHistoryService
         return itemIdsByName.GetValueOrDefault(itemName.Trim());
     }
 
+    // Builds a case-insensitive lookup from localized item names to Lumina row IDs.
     private Dictionary<string, uint> BuildItemNameIndex()
     {
         var sheet = dataManager.GetExcelSheet<Item>();
@@ -814,6 +829,7 @@ public sealed partial class ChestHistoryService
         return index;
     }
 
+    // Heuristically identifies text-node content that looks like a full history row.
     private static bool LooksLikeHistoryRow(string text)
     {
         return ContainsDate(text)
@@ -825,6 +841,7 @@ public sealed partial class ChestHistoryService
         return DateRegex().IsMatch(text);
     }
 
+    // Checks for action words from supported Japanese and English clients.
     private static bool ContainsAction(string text)
     {
         return text.Contains("入庫", StringComparison.Ordinal)
@@ -839,6 +856,7 @@ public sealed partial class ChestHistoryService
             || text.Contains("entrusted", StringComparison.OrdinalIgnoreCase);
     }
 
+    // Normalizes localized action words to the internal action names used by summaries.
     private static string DetectAction(string text)
     {
         if (text.Contains("出庫", StringComparison.Ordinal)
@@ -862,6 +880,7 @@ public sealed partial class ChestHistoryService
         return "";
     }
 
+    // Maps known game action IDs to internal action names.
     private static string ActionFromKind(int actionKind)
     {
         return actionKind switch
@@ -874,6 +893,7 @@ public sealed partial class ChestHistoryService
         };
     }
 
+    // Parses supported localized timestamp formats from a history row.
     private static bool TryParseTimestamp(string text, DateTimeOffset capturedAt, out DateTimeOffset timestamp)
     {
         timestamp = default;
@@ -900,6 +920,7 @@ public sealed partial class ChestHistoryService
 
         if (DateTime.TryParseExact(dateText, formats, CultureInfo.CurrentCulture, DateTimeStyles.AllowWhiteSpaces, out var local))
         {
+            // Some clients omit the year in visible history rows; use the capture year for filtering.
             if (local.Year == 1)
             {
                 local = new DateTime(capturedAt.Year, local.Month, local.Day, local.Hour, local.Minute, 0);
@@ -930,8 +951,10 @@ public sealed partial class ChestHistoryService
         return int.TryParse(match.Groups["quantity"].Value.Replace(",", "", StringComparison.Ordinal), NumberStyles.Integer, CultureInfo.InvariantCulture, out quantity);
     }
 
+    // Guesses an item name from a raw text row when structured item data is unavailable.
     private static string GuessItemName(string text)
     {
+        // Remove known history boilerplate before choosing the most specific remaining token.
         var cleaned = DateRegex().Replace(text, " ");
         cleaned = QuantityRegex().Replace(cleaned, " ");
         cleaned = ActionWordsRegex().Replace(cleaned, " ");
@@ -947,8 +970,10 @@ public sealed partial class ChestHistoryService
         return parts.OrderByDescending(part => part.Length).First();
     }
 
+    // Removes UI-only glyphs and control characters before storing display text.
     private static string CleanDisplayText(string text)
     {
+        // FFXIV UI strings may include control/private-use glyphs that should not appear in CSV output.
         var builder = new StringBuilder(text.Length);
         foreach (var character in text)
         {
@@ -964,8 +989,10 @@ public sealed partial class ChestHistoryService
         return CleanText(builder.ToString());
     }
 
+    // Extracts the FC chest tab number from the private-use tab icon.
     private static int ParseChestTab(string text)
     {
+        // Chest tabs are represented by private-use icon glyphs before display text cleanup.
         foreach (var character in text)
         {
             if (character is >= '\uE08F' and <= '\uE098')
@@ -984,12 +1011,14 @@ public sealed partial class ChestHistoryService
             : "";
     }
 
+    // Removes item-link payload markers and leftover UI formatting tokens from item names.
     private static string CleanItemText(string text)
     {
         var cleaned = CleanDisplayText(text);
         var payloadEnd = cleaned.LastIndexOf('&');
         if (payloadEnd >= 0 && payloadEnd + 1 < cleaned.Length)
         {
+            // Item payloads can include formatting/control data before the final display name.
             cleaned = cleaned[(payloadEnd + 1)..];
         }
 
