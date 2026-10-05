@@ -596,7 +596,7 @@ public sealed partial class ChestHistoryService
 
         var path = Path.Combine(outputDirectory, $"fc_chest_summary_from_{from:yyyyMMdd_HHmm}_to_{capturedAt:yyyyMMdd_HHmmss}.csv");
         var builder = new StringBuilder();
-        builder.AppendLine("requested_from_time,captured_at,item_name,player,deposited_quantity,withdrawn_quantity,net_quantity");
+        builder.AppendLine("requested_from_time,captured_at,item_name,player,deposited_quantity,withdrawn_quantity,net_quantity,action_timestamps");
 
         foreach (var summary in summaries)
         {
@@ -606,7 +606,8 @@ public sealed partial class ChestHistoryService
             builder.Append(Escape(summary.PlayerName)).Append(',');
             builder.Append(summary.Deposited.ToString(CultureInfo.InvariantCulture)).Append(',');
             builder.Append(summary.Withdrawn.ToString(CultureInfo.InvariantCulture)).Append(',');
-            builder.AppendLine(summary.Net.ToString(CultureInfo.InvariantCulture));
+            builder.Append(summary.Net.ToString(CultureInfo.InvariantCulture)).Append(',');
+            builder.AppendLine(Escape(string.Join("; ", summary.ActionTimestamps.Select(FormatCsvDateTime))));
         }
 
         File.WriteAllText(path, builder.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
@@ -633,7 +634,14 @@ public sealed partial class ChestHistoryService
                     sample.PlayerName,
                     deposited,
                     withdrawn,
-                    group.Sum(GetSummaryNetQuantity));
+                    group.Sum(GetSummaryNetQuantity))
+                {
+                    // Keep one timestamp per action, including actions occurring in the same minute.
+                    ActionTimestamps = group
+                        .OrderBy(entry => entry.Timestamp)
+                        .Select(entry => entry.Timestamp)
+                        .ToList(),
+                };
             })
             .OrderBy(summary => summary.ItemName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(summary => summary.PlayerName, StringComparer.OrdinalIgnoreCase)
@@ -1084,7 +1092,10 @@ public sealed record DebugDumpResult(string CsvPath, int Count);
 
 public sealed record HistoryEntry(DateTimeOffset Timestamp, int ActionKind, string Action, string PlayerName, int ChestTab, string ChestLocation, string ItemName, uint ItemId, int Quantity, string RawItemText);
 
-public sealed record HistorySummaryEntry(string ItemName, string PlayerName, int Deposited, int Withdrawn, int Net);
+public sealed record HistorySummaryEntry(string ItemName, string PlayerName, int Deposited, int Withdrawn, int Net)
+{
+    public IReadOnlyList<DateTimeOffset> ActionTimestamps { get; init; } = Array.Empty<DateTimeOffset>();
+}
 
 public sealed record HistoryTabSummary(int ChestTab, IReadOnlyList<HistorySummaryEntry> Summaries);
 

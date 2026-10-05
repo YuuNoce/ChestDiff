@@ -25,6 +25,7 @@ ChestDiff is a minimal Dalamud plugin that reads the visible Free Company chest 
 - The plugin UI can show the summary in the window, export the summary CSV, export a dump file, or combine those actions.
 - The summary view shows All and Tab 1-5 summaries with `Item`, `Player`, `Deposit`, `Withdraw`, and `Net` columns.
 - The summary CSV aggregates deposited, withdrawn, and net quantity by item and player.
+- The summary CSV's `action_timestamps` column lists each contributing action's date/time in chronological order, separated by `; `. Times use the local `yyyy-MM-dd HH:mm` format, matching the dump CSV. Repeated timestamps are kept for separate actions in the same minute.
 - The optional dump file keeps raw parsed rows for troubleshooting.
 - `/chestdiff dump` exports diagnostic raw chest log text to CSV.
 - `item_id` is resolved by matching the parsed item name against the Item sheet when possible.

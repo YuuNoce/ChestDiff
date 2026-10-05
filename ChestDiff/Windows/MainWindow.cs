@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
 namespace ChestDiff.Windows;
@@ -76,9 +77,10 @@ public sealed class MainWindow : Window, IDisposable
             exportStartMode = Configuration.StartModeCustomDateTime;
         }
 
-        ImGui.BeginDisabled(exportStartMode != Configuration.StartModeCustomDateTime);
-        DrawDateTimeInputs();
-        ImGui.EndDisabled();
+        using (ImRaii.Disabled(exportStartMode != Configuration.StartModeCustomDateTime))
+        {
+            DrawDateTimeInputs();
+        }
 
         ImGui.Spacing();
         ImGui.Text("Actions");
@@ -98,15 +100,16 @@ public sealed class MainWindow : Window, IDisposable
 
         ImGui.Spacing();
         ImGui.Text("Output directory");
-        ImGui.BeginDisabled(!exportsFile);
-        ImGui.SetNextItemWidth(-1);
-        ImGui.InputText("##ChestDiffOutputDirectory", ref outputDirectory, 500);
-
-        if (ImGui.Button("Use default"))
+        using (ImRaii.Disabled(!exportsFile))
         {
-            outputDirectory = plugin.HistoryService.DefaultOutputDirectory;
+            ImGui.SetNextItemWidth(-1);
+            ImGui.InputText("##ChestDiffOutputDirectory", ref outputDirectory, 500);
+
+            if (ImGui.Button("Use default"))
+            {
+                outputDirectory = plugin.HistoryService.DefaultOutputDirectory;
+            }
         }
-        ImGui.EndDisabled();
 
         ImGui.SameLine();
         if (ImGui.Button("Copy path"))
@@ -128,18 +131,17 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.TextColored(new Vector4(1.0f, 0.86f, 0.25f, 1.0f), "! Open the Free Company Chest Log before exporting.");
         ImGui.TextDisabled(historyLogOpen ? "Status: FreeCompanyChestLog is open." : "Status: FreeCompanyChestLog is not open.");
         ImGui.Spacing();
-        ImGui.BeginDisabled(!canRun);
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.12f, 0.45f, 0.85f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.16f, 0.55f, 1.0f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.08f, 0.35f, 0.70f, 1.0f));
-        if (ImGui.Button("Show / Export", new Vector2(220, 34)))
+        using (ImRaii.Disabled(!canRun))
+        using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.12f, 0.45f, 0.85f, 1.0f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.16f, 0.55f, 1.0f, 1.0f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.08f, 0.35f, 0.70f, 1.0f)))
         {
-            SaveSettings();
-            RunShowExport();
+            if (ImGui.Button("Show / Export", new Vector2(220, 34)))
+            {
+                SaveSettings();
+                RunShowExport();
+            }
         }
-
-        ImGui.PopStyleColor(3);
-        ImGui.EndDisabled();
 
         if (!historyLogOpen)
         {
@@ -280,33 +282,35 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.Text($"Preview: {history.ExportedEntryCount}/{history.VisibleHistoryRowCount} rows since {history.From:yyyy-MM-dd HH:mm}");
 
         // Keep the full summary and per-tab summaries in one table layout for easier comparison.
-        if (!ImGui.BeginTabBar("ChestDiffSummaryTabs"))
+        using var tabBar = ImRaii.TabBar("ChestDiffSummaryTabs");
+        if (!tabBar.Success)
         {
             return;
         }
 
-        if (ImGui.BeginTabItem("All"))
+        using (var allTab = ImRaii.TabItem("All"))
         {
-            DrawSummaryTable(history.Summaries);
-            ImGui.EndTabItem();
+            if (allTab.Success)
+            {
+                DrawSummaryTable(history.Summaries);
+            }
         }
 
         foreach (var tabSummary in history.TabSummaries)
         {
-            if (ImGui.BeginTabItem($"Tab {tabSummary.ChestTab}"))
+            using var tab = ImRaii.TabItem($"Tab {tabSummary.ChestTab}");
+            if (tab.Success)
             {
                 DrawSummaryTable(tabSummary.Summaries);
-                ImGui.EndTabItem();
             }
         }
-
-        ImGui.EndTabBar();
     }
 
     private static void DrawSummaryTable(IReadOnlyList<HistorySummaryEntry> summaries)
     {
         const ImGuiTableFlags flags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable | ImGuiTableFlags.ScrollY;
-        if (!ImGui.BeginTable("ChestDiffSummaryTable", 5, flags, new Vector2(0, 220)))
+        using var table = ImRaii.Table("ChestDiffSummaryTable", 5, flags, new Vector2(0, 220));
+        if (!table.Success)
         {
             return;
         }
@@ -323,7 +327,6 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.TableNextRow();
             ImGui.TableNextColumn();
             ImGui.TextDisabled("No summary rows.");
-            ImGui.EndTable();
             return;
         }
 
@@ -336,8 +339,6 @@ public sealed class MainWindow : Window, IDisposable
             TableText(summary.Withdrawn.ToString(CultureInfo.InvariantCulture));
             TableText(summary.Net.ToString(CultureInfo.InvariantCulture));
         }
-
-        ImGui.EndTable();
     }
 
     private static void TableText(string text)

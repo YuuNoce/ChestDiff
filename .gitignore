@@ -2,3 +2,6 @@
 /ChestDiff/obj/
 /.vs/
 *.user
+__pycache__/
+/settlement_csv.py
+/settlement_*.csv
